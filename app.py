@@ -19,7 +19,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 # ページの設定
 st.set_page_config(
-    page_title="水産事業部：飲食店データ収集・アプローチ管理システム",
+    page_title="アーク水産事業部：飲食店データ収集・アプローチ管理システム",
     page_icon="🌊",
     layout="wide"
 )
@@ -89,9 +89,30 @@ def determine_approach(row):
 init_master()
 
 st.title("🌊 水産事業部：飲食店データ収集・アプローチ管理システム（完全統合版）")
-st.markdown("Google Places APIを使ったデータ収集、郵便番号付きマスター管理、インスタ5件分割、SMTP一斉送信、長4封筒PDF宛名印刷をひとつにまとめたシステムです。")
+st.markdown("Google Places APIを使ったデータ収集、インスタ5件分割、SMTP一斉送信、長4封筒PDF宛名印刷、システムです。")
 
-main_tab1, main_tab2, main_tab3 = st.tabs(["🔍 1. データ収集（API）", "📊 2. アプローチ管理・実行ダッシュボード", "📁 3. 累計マスターデータベース"])
+# 共通：今週の取得件数を計算してトップにアラート表示する関数
+def check_weekly_alert():
+    if os.path.exists(MASTER_FILE):
+        df = pd.read_csv(MASTER_FILE)
+        if not df.empty and '取込日' in df.columns:
+            try:
+                df['取込日_dt'] = pd.to_datetime(df['取込日'], errors='coerce')
+                today_date = datetime.date.today()
+                start_of_week = today_date - datetime.timedelta(days=today_date.weekday())
+                this_week_df = df[df['取込日_dt'].dt.date >= start_of_week]
+                this_week_count = len(this_week_df)
+                
+                if this_week_count > 50:
+                    st.warning(f"🚨 **【今週のペース超過アラート】** 今週すでに新規データが **{this_week_count}件** 登録されています（50件オーバー）。アプローチの進捗やAPI利用状況をご確認ください！")
+                else:
+                    st.info(f"📊 **今週の登録状況**: 現在 **{this_week_count}件** / 目安50件")
+            except Exception:
+                pass
+
+check_weekly_alert()
+
+main_tab1, main_tab2, main_tab3 = st.tabs(["🔍 1. データ収集（API）", "📊 2. アプローチ管理・アプローチの実行", "📁 3. 累計マスターデータベース"])
 
 # ==========================================
 # タブ1: データ収集（API）
@@ -103,9 +124,9 @@ with main_tab1:
     col1, col2 = st.columns(2)
     with col1:
         api_key_input = st.text_input("Google Places API キー", type="password", value="")
-        area_input = st.text_input("エリア（例: 中央区、銀座、新橋）", value="中央区")
+        area_input = st.text_input("エリア（例: 本八幡、銀座、新橋）", value="中央区")
     with col2:
-        keyword_input = st.text_input("キーワード（例: 海鮮居酒屋、寿司）", value="海鮮居酒屋")
+        keyword_input = st.text_input("キーワード（例: 海鮮居酒屋、寿司、宅配）", value="海鮮居酒屋")
         target_count = st.slider("取得目標件数", min_value=5, max_value=50, value=25, step=5)
         
     execute_btn = st.button("データを収集する", type="primary", key="btn_fetch_api")
@@ -188,7 +209,7 @@ with main_tab1:
                             "優先アプローチ": approach,
                             "ステータス": "未アプローチ",
                             "アプローチ結果": "-",
-                            "備考": f"公式HP/グルメサイト: {website}" if website else "Google Places API取得"
+                            "備考": website if website else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' 食べログ')}"
                         })
 
                     if not new_leads:
@@ -213,11 +234,11 @@ with main_tab1:
                             )
 
 # ==========================================
-# タブ2: アプローチ管理・実行ダッシュボード
+# タブ2: アプローチ管理・実行
 # ==========================================
 with main_tab2:
-    st.subheader("📊 アプローチ管理・全体俯瞰＆実行ダッシュボード")
-    st.markdown("すべての店舗データを一覧で確認しながら、**郵便番号・電話・FAX・メールの修正、アプローチ方法の変更、結果の入力**を行い、各種アクションを実行できます。")
+    st.subheader("📊 アプローチ管理・全体＆実行")
+    st.markdown("すべての店舗データを一覧で確認しながら、リンク（食べログ・公式HP等）の確認、各種修正やアプローチ結果の入力を行えます。")
     
     if os.path.exists(MASTER_FILE):
         target_df = pd.read_csv(MASTER_FILE)
@@ -241,7 +262,7 @@ with main_tab2:
             target_df.insert(0, '除外', False)
 
         st.markdown("---")
-        st.markdown("### 📝 全体一覧テーブル（直接編集して保存できます）")
+        st.markdown("### 📝 全体一覧テーブル（クリック可能なリンク対応・直接編集可能）")
         
         edited_master_df = st.data_editor(
             target_df,
@@ -250,6 +271,8 @@ with main_tab2:
             num_rows="fixed",
             column_config={
                 "除外": st.column_config.CheckboxColumn("除外", help="チェックを入れるとアプローチ対象から除外されます"),
+                "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", display_url=".*", help="クリックして別タブでインスタを開く"),
+                "備考": st.column_config.LinkColumn("公式HP/食べログ等", display_url=".*", help="クリックしてグルメサイトやHPを別タブで開く"),
                 "優先アプローチ": st.column_config.SelectboxColumn(
                     "優先アプローチ",
                     options=["インスタDM", "メール", "FAX", "郵送", "要確認"],
@@ -278,7 +301,7 @@ with main_tab2:
         st.markdown("---")
         st.subheader("🚀 手法別・実行アクション")
 
-        exec_tabs = st.tabs(["🔗 インスタDM（5件ずつ）", "📠 FAXリスト", "✉️ SMTPメール送信", "🖨️ 郵送・長4封筒PDF"])
+        exec_tabs = st.tabs(["🔗 インスタDM（3分の1幅でコンパクト配置）", "📠 FAXリスト", "✉️ SMTPメール送信", "🖨️ 郵送・長4封筒PDF"])
 
         with exec_tabs[0]:
             insta_sub = active_df[active_df['優先アプローチ'] == 'インスタDM']
@@ -295,15 +318,20 @@ with main_tab2:
             if not insta_rows:
                 st.info("対象のインスタDMリンクがありません。")
             else:
-                chunk_size = 5
-                for i in range(0, len(insta_rows), chunk_size):
-                    chunk = insta_rows[i:i+chunk_size]
-                    s_idx = i + 1
-                    e_idx = min(i + chunk_size, len(insta_rows))
-                    if st.button(f"🔗 インスタを開く: 第 {s_idx} 〜 {e_idx} 件目（{len(chunk)}件）", key=f"btn_chunk_{i}"):
-                        for name, lk in chunk:
-                            webbrowser.open(lk)
-                        st.success(f"{s_idx} 〜 {e_idx} 件目のリンクを開きました！")
+                col_left, col_mid, col_right = st.columns([1, 1, 1])
+                with col_left:
+                    st.markdown("##### 📌 インスタ一括オープン（5件ずつ）")
+                    chunk_size = 5
+                    for i in range(0, len(insta_rows), chunk_size):
+                        chunk = insta_rows[i:i+chunk_size]
+                        s_idx = i + 1
+                        e_idx = min(i + chunk_size, len(insta_rows))
+                        if st.button(f"🔗 インスタを開く: 第 {s_idx} 〜 {e_idx} 件目（{len(chunk)}件）", key=f"btn_chunk_{i}"):
+                            for name, lk in chunk:
+                                webbrowser.open(lk)
+                            st.success(f"{s_idx} 〜 {e_idx} 件目のリンクを開きました！")
+                with col_mid:
+                    st.info("💡 **ヒント**: 左のボタンを押すと、ブラウザに5件ずつInstagramのページが別タブで立ち上がります。")
 
         with exec_tabs[1]:
             fax_sub = active_df[active_df['優先アプローチ'] == 'FAX']
@@ -345,7 +373,7 @@ with main_tab2:
                     smtp_password = st.text_input("メールパスワード", type="password", value="")
                     mail_subject = st.text_input("メール件名", value="【水産事業部】新鮮な海の幸のご案内・お取引のご相談")
                 
-                mail_body = st.text_area("メール本文", value="平素は格別のご愛顧を賜り厚く御礼申し上げます。\n\n弊社では毎朝市場から直送される新鮮な水産物をご提供しております。\nぜひ一度、サンプルやカタログをご覧ください。\n\nよろしくお願い申し上げます。")
+                mail_body = st.text_area("メール本文", value="平素は格別のご愛顧を賜り厚く御礼申し上げます。\n\n弊社㈱アークフィールド（千葉県市川市に所在）では冷凍すしネタをストックして直送にてご提供しております。\nぜひ一度、サンプルやカタログをご覧ください。\n\nよろしくお願い申し上げます。詳しくは　https://secure01.blue.shared-server.net/www.arkf.jp/index.html")
                 
                 send_button = st.form_submit_button("🚀 登録されているメールアドレスに一斉送信する")
                 
@@ -398,9 +426,9 @@ with main_tab2:
                         envelope_height = 90 * mm
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
-                        font_path = "C:\Windows\Fonts\meiryo.ttc"
+                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\Windows\Fonts\msgothic.ttc"
+                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
@@ -445,11 +473,11 @@ with main_tab2:
                 st.info("対象の郵送店舗はありません。")
 
 # ==========================================
-# タブ3: 累計マスターデータベース確認
+# タブ3: 累計マスターデータベース確認＆読込
 # ==========================================
 main_tab3_obj = main_tab3
 with main_tab3_obj:
-    st.subheader("📊 累計マスターデータベース管理")
+    st.subheader("📊 累計マスターデータベース管理・バックアップ・読込")
     
     if os.path.exists(MASTER_FILE):
         master_df = pd.read_csv(MASTER_FILE)
@@ -471,4 +499,30 @@ with main_tab3_obj:
                 key="dl_master_all"
             )
     else:
-        st.info("まだマスターデータベースが存在しません。タブ1（データ収集）からデータを取得してください。")
+        st.info("まだマスターデータベースが存在しません。タブ1（データ収集）からデータを取得するか、下からCSVをアップロードしてください。")
+
+    st.markdown("---")
+    st.markdown("### 🔄 マスターCSVの読込（復元・追加統合）")
+    st.markdown("過去にダウンロードしたバックアップCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
+    
+    uploaded_file = st.file_uploader("マスターCSVファイルを選択", type=["csv"], key="master_uploader")
+    if uploaded_file is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded_file)
+            st.markdown(f"選択されたファイル内のデータ件数: **{len(uploaded_df)}件**")
+            if st.button("🚀 アップロードしたCSVを現在のマスターに統合・復元する", type="primary"):
+                if os.path.exists(MASTER_FILE):
+                    current_master = pd.read_csv(MASTER_FILE)
+                    combined = pd.concat([current_master, uploaded_df], ignore_index=True)
+                    before_len = len(combined)
+                    combined = combined.drop_duplicates(subset=['店舗名'], keep='first')
+                    combined.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
+                    added_count = len(combined) - len(current_master)
+                    st.success(f"【統合完了】マスターデータを合流しました！（新規追加: {added_count}件 / 重複スキップ）")
+                    st.rerun()
+                else:
+                    uploaded_df.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
+                    st.success("【完了】新しいマスターデータベースとして保存しました！")
+                    st.rerun()
+        except Exception as e:
+            st.error(f"ファイルの読み込みに失敗しました: {e}")
