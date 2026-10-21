@@ -11,8 +11,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from io import BytesIO
 
-# ReportLab imports for PDF generation
-from reportlab.lib.pagesizes import mm
+# ReportLab imports for PDF generation (修正：mmは reportlab.lib.units からインポート)
+from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
