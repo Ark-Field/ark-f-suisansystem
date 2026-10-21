@@ -1,4 +1,4 @@
-import streamlit as st
+no_encryption_code = '''import streamlit as st
 import requests
 import pandas as pd
 import datetime
@@ -67,7 +67,7 @@ def init_master():
 
 def load_master_dataframe():
     if os.path.exists(MASTER_FILE):
-        df = pd.read_csv(MASTER_FILE, dtype=str) # すべて文字列として読み込むことで、メールや郵便番号、電話番号が数値型になってしまうのを防ぐ
+        df = pd.read_csv(MASTER_FILE, dtype=str)
     else:
         df = pd.DataFrame(columns=[
             "取込日", "郵便番号", "店舗名", "住所", "電話", "FAX", "メール", "インスタのリンク", "優先アプローチ", "ステータス", "アプローチ結果", "備考"
@@ -77,14 +77,14 @@ def load_master_dataframe():
 def format_phone_number(phone_str):
     if not phone_str or phone_str in ['nan', '-', '']:
         return ""
-    formatted = re.sub(r'^\+81\s?', '0', phone_str.strip())
+    formatted = re.sub(r'^\\+81\\s?', '0', phone_str.strip())
     formatted = formatted.replace(" ", "-").replace("--", "-")
     return formatted
 
 def format_address(address_str):
     if not address_str:
         return ""
-    cleaned = re.sub(r'^(日本|Japan)[,、\s]*', '', address_str.strip())
+    cleaned = re.sub(r'^(日本|Japan)[,、\\s]*', '', address_str.strip())
     return cleaned.strip()
 
 def extract_postal_code(address_str):
@@ -401,23 +401,25 @@ with main_tab2:
                 st.dataframe(mail_sub[['店舗名', 'メール', '備考']], width="stretch")
             
             st.markdown("---")
-            st.markdown("### ⚙️ SMTPメール自動送信設定")
+            st.markdown("### ⚙️ SMTPメール自動送信設定（暗号化なし対応）")
             with st.form("smtp_form"):
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
                     smtp_server = st.text_input("SMTPサーバー", value="smtp.arkf.jp")
-                    smtp_port = st.number_input("ポート番号", value=587, step=1)
+                    smtp_port = st.number_input("ポート番号", value=25, step=1)
                     smtp_user = st.text_input("送信元メールアドレス (User)", value="fax@arkf.jp")
                 with col_s2:
                     smtp_password = st.text_input("メールパスワード", type="password", value="")
                     mail_subject = st.text_input("メール件名", value="【水産事業部】新鮮な海の幸のご案内・お取引のご相談")
+                
+                use_tls = st.checkbox("STARTTLS（暗号化）を使用する", value=False)
                 
                 mail_body = st.text_area("メール本文", value="""平素は格別のご愛顧を賜り厚く御礼申し上げます。
 
 弊社㈱アークフィールド（千葉県市川市に所在）では冷凍すしネタをストックして直送にてご提供しております。
 ぜひ一度、サンプルやカタログをご覧ください。
 
-よろしくお願い申し上げます。詳しくは　https://secure01.blue.shared-server.net/www.arkf.jp/index.html""")
+よろしくお願い申し上げます。詳しくは https://secure01.blue.shared-server.net/www.arkf.jp/index.html""")
                 
                 send_button = st.form_submit_button("🚀 登録されているメールアドレスに一斉送信する")
                 
@@ -433,7 +435,8 @@ with main_tab2:
                         with st.spinner("メールを送信中..."):
                             try:
                                 server = smtplib.SMTP(smtp_server, int(smtp_port))
-                                server.starttls()
+                                if use_tls:
+                                    server.starttls()
                                 server.login(smtp_user, smtp_password)
                                 
                                 for store_name, recipient in valid_mails:
@@ -471,9 +474,9 @@ with main_tab2:
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
                         font_name = 'Helvetica'
-                        font_path = "C:\Windows\Fonts\meiryo.ttc"
+                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\Windows\Fonts\msgothic.ttc"
+                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
@@ -561,7 +564,7 @@ with main_tab3_obj:
 
     st.markdown("---")
     st.markdown("### 🔄 マスターCSVの読込（復元・追加統合）")
-    st.markdown("過去にダウンロードしたバックupCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
+    st.markdown("過去にダウンロードしたバックアップCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
     
     uploaded_file = st.file_uploader("マスターCSVファイルを選択", type=["csv"], key="master_uploader")
     if uploaded_file is not None:
@@ -577,3 +580,9 @@ with main_tab3_obj:
                 st.rerun()
         except Exception as e:
             st.error(f"ファイルの読み込みに失敗しました: {e}")
+'''
+
+with open("app.py", "w", encoding="utf-8") as f:
+    f.write(no_encryption_code)
+
+print("App.py updated with toggle for encryption (STARTTLS) and default port 25.")
