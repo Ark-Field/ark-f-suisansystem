@@ -271,8 +271,8 @@ with main_tab2:
             num_rows="fixed",
             column_config={
                 "除外": st.column_config.CheckboxColumn("除外", help="チェックを入れるとアプローチ対象から除外されます"),
-                "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", display_url=".*", help="クリックして別タブでインスタを開く"),
-                "備考": st.column_config.LinkColumn("公式HP/食べログ等", display_url=".*", help="クリックしてグルメサイトやHPを別タブで開く"),
+                "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", help="クリックして別タブでインスタを開く"),
+                "備考": st.column_config.LinkColumn("公式HP/食べログ等", help="クリックしてグルメサイトやHPを別タブで開く"),
                 "優先アプローチ": st.column_config.SelectboxColumn(
                     "優先アプローチ",
                     options=["インスタDM", "メール", "FAX", "郵送", "要確認"],
@@ -470,7 +470,7 @@ with main_tab2:
                     except Exception as e:
                         st.error(f"PDF生成中にエラーが発生しました: {e}")
             else:
-                st.info("対象の郵送店舗はありません。")
+                st.info("そのほかの郵送対象店舗はありません。")
 
 # ==========================================
 # タブ3: 累計マスターデータベース確認＆読込
