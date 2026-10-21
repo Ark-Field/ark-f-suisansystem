@@ -1,4 +1,4 @@
-no_encryption_code = '''import streamlit as st
+final_fix_code = '''import streamlit as st
 import requests
 import pandas as pd
 import datetime
@@ -446,7 +446,7 @@ with main_tab2:
                                         msg['To'] = recipient
                                         msg['Subject'] = mail_subject
                                         
-                                        personalized_body = store_name + " ご担当者様\n\n" + mail_body
+                                        personalized_body = store_name + " ご担当者様\\n\\n" + mail_body
                                         msg.attach(MIMEText(personalized_body, 'plain'))
                                         
                                         server.sendmail(smtp_user, recipient, msg.as_string())
@@ -556,7 +556,7 @@ with main_tab3_obj:
                 label="📥 累計マスターCSV（全データ）をダウンロード",
                 data=f,
                 file_name=MASTER_FILE,
-                mime="text/csv",
+                mime="text/css" if False else "text/csv",
                 key="dl_master_all"
             )
     else:
@@ -583,6 +583,6 @@ with main_tab3_obj:
 '''
 
 with open("app.py", "w", encoding="utf-8") as f:
-    f.write(no_encryption_code)
+    f.write(final_fix_code)
 
-print("App.py updated with toggle for encryption (STARTTLS) and default port 25.")
+print("Syntax error successfully fixed.")
