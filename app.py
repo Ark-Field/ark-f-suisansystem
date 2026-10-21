@@ -385,7 +385,12 @@ with main_tab2:
                     smtp_password = st.text_input("メールパスワード", type="password", value="")
                     mail_subject = st.text_input("メール件名", value="【水産事業部】新鮮な海の幸のご案内・お取引のご相談")
                 
-                mail_body = st.text_area("メール本文", value="平素は格別のご愛顧を賜り厚く御礼申し上げます。\n\n弊社㈱アークフィールド（千葉県市川市に所在）では冷凍すしネタをストックして直送にてご提供しております。\nぜひ一度、サンプルやカタログをご覧ください。\n\nよろしくお願い申し上げます。詳しくは　https://secure01.blue.shared-server.net/www.arkf.jp/index.html")
+                mail_body = st.text_area("メール本文", value="平素は格別のご愛顧を賜り厚く御礼申し上げます。
+
+弊社㈱アークフィールド（千葉県市川市に所在）では冷凍すしネタをストックして直送にてご提供しております。
+ぜひ一度、サンプルやカタログをご覧ください。
+
+よろしくお願い申し上げます。詳しくは　https://secure01.blue.shared-server.net/www.arkf.jp/index.html")
                 
                 send_button = st.form_submit_button("🚀 登録されているメールアドレスに一斉送信する")
                 
@@ -411,7 +416,9 @@ with main_tab2:
                                         msg['To'] = recipient
                                         msg['Subject'] = mail_subject
                                         
-                                        personalized_body = f"{store_name} ご担当者様\n\n" + mail_body
+                                        personalized_body = f"{store_name} ご担当者様
+
+" + mail_body
                                         msg.attach(MIMEText(personalized_body, 'plain'))
                                         
                                         server.sendmail(smtp_user, recipient, msg.as_string())
@@ -465,8 +472,8 @@ with main_tab2:
                             c.setFont(font_name, 16)
                             c.drawString(45 * mm, 32 * mm, f"{store_name} 御中")
                             
-                            c.showPage()
                             c.restoreState()
+                            c.showPage()
                         
                         c.save()
                         buffer.seek(0)
@@ -523,18 +530,6 @@ with main_tab3_obj:
             uploaded_df = pd.read_csv(uploaded_file)
             st.markdown(f"選択されたファイル内のデータ件数: **{len(uploaded_df)}件**")
             if st.button("🚀 アップロードしたCSVを現在のマスターに統合・復元する", type="primary"):
-                if os.path.exists(MASTER_FILE):
-                    current_master = pd.read_csv(MASTER_FILE)
-                    combined = pd.concat([current_master, uploaded_df], ignore_index=True)
-                    before_len = len(combined)
-                    combined = combined.drop_duplicates(subset=['店舗名'], keep='first')
-                    combined.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
-                    added_count = len(combined) - len(current_master)
-                    st.success(f"【統合完了】マスターデータを合流しました！（新規追加: {added_count}件 / 重複スキップ）")
-                    st.rerun()
-                else:
-                    uploaded_df.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
-                    st.success("【完了】新しいマスターデータベースとして保存しました！")
-                    st.rerun()
+                (current_master := pd.read_csv(MASTER_FILE) if os.path.exists(MASTER_FILE) else pd.DataFrame()),                 (combined := pd.concat([current_master, uploaded_df], ignore_index=True).drop_duplicates(subset=['店舗名'], keep='first')),                 combined.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig'),                 st.success(f"【統合完了】マスターデータを合流しました！（新規追加: {len(combined) - len(current_master)}件 / 重複スキップ）"),                 st.rerun() if os.path.exists(MASTER_FILE) else None
         except Exception as e:
             st.error(f"ファイルの読み込みに失敗しました: {e}")
