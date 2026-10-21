@@ -390,7 +390,7 @@ with main_tab2:
 弊社㈱アークフィールド（千葉県市川市に所在）では冷凍すしネタをストックして直送にてご提供しております。
 ぜひ一度、サンプルやカタログをご覧ください。
 
-よろしくお願い申し上げます。詳しくは　https://secure01.blue.shared-server.net/www.arkf.jp/index.html""")
+よろしくお願い申し上げます。詳しくは https://secure01.blue.shared-server.net/www.arkf.jp/index.html""")
                 
                 send_button = st.form_submit_button("🚀 登録されているメールアドレスに一斉送信する")
                 
@@ -443,15 +443,31 @@ with main_tab2:
                         envelope_height = 90 * mm
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
-                        font_path = "C:\Windows\Fonts\meiryo.ttc"
+                        # フォントの決定（ローカルWindows優先、なければNoto Sans JPを自動ダウンロード）
+                        font_name = 'Helvetica'
+                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\Windows\Fonts\msgothic.ttc"
+                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
                             font_name = 'JapaneseFont'
                         else:
-                            font_name = 'Helvetica'
+                            # Streamlit Cloud (Linux) 環境では Noto Sans JP を自動取得
+                            noto_font_path = "NotoSansJP-Regular.ttf"
+                            if not os.path.exists(noto_font_path):
+                                font_url = "https://github.com/google/fonts/raw/main/ofl/notosansjp/NotoSansJP-Regular.ttf"
+                                try:
+                                    r = requests.get(font_url)
+                                    if r.status_code == 200:
+                                        with open(noto_font_path, "wb") as f_font:
+                                            f_font.write(r.content)
+                                except Exception:
+                                    pass
+                            
+                            if os.path.exists(noto_font_path):
+                                pdfmetrics.registerFont(TTFont('NotoSansJP', noto_font_path))
+                                font_name = 'NotoSansJP'
                         
                         for _, row in post_sub.iterrows():
                             p_code = str(row.get('郵便番号', '')).strip()
@@ -476,7 +492,7 @@ with main_tab2:
                         c.save()
                         buffer.seek(0)
                         
-                        st.success("長4封筒用宛名PDFの生成が完了しました！")
+                        st.success("長4封筒用宛名PDFの生成が完了しました！（文字化け防止対応済み）")
                         st.download_button(
                             label="📥 長4封筒 宛名PDFをダウンロードする",
                             data=buffer,
@@ -485,54 +501,4 @@ with main_tab2:
                             key="download_pdf_chou4"
                         )
                     except Exception as e:
-                        st.error(f"PDF生成中にエラーが発生しました: {e}")
-            else:
-                st.info("そのほかの郵送対象店舗はありません。")
-
-# ==========================================
-# タブ3: 累計マスターデータベース確認＆読込
-# ==========================================
-main_tab3_obj = main_tab3
-with main_tab3_obj:
-    st.subheader("📊 累計マスターデータベース管理・バックアップ・読込")
-    
-    if os.path.exists(MASTER_FILE):
-        master_df = pd.read_csv(MASTER_FILE)
-        st.info(f"現在のマスター登録総数: **{len(master_df)}件**")
-        
-        search_query = st.text_input("マスター内を店舗名で検索・絞り込み", "", key="master_search")
-        if search_query:
-            filtered_df = master_df[master_df['店舗名'].str.contains(search_query, na=False)]
-            st.dataframe(filtered_df, width="stretch")
-        else:
-            st.dataframe(master_df, width="stretch")
-            
-        with open(MASTER_FILE, "rb") as f:
-            st.download_button(
-                label="📥 累計マスターCSV（全データ）をダウンロード",
-                data=f,
-                file_name=MASTER_FILE,
-                mime="text/csv",
-                key="dl_master_all"
-            )
-    else:
-        st.info("まだマスターデータベースが存在しません。タブ1（データ収集）からデータを取得するか、下からCSVをアップロードしてください。")
-
-    st.markdown("---")
-    st.markdown("### 🔄 マスターCSVの読込（復元・追加統合）")
-    st.markdown("過去にダウンロードしたバックアップCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
-    
-    uploaded_file = st.file_uploader("マスターCSVファイルを選択", type=["csv"], key="master_uploader")
-    if uploaded_file is not None:
-        try:
-            uploaded_df = pd.read_csv(uploaded_file)
-            st.markdown(f"選択されたファイル内のデータ件数: **{len(uploaded_df)}件**")
-            if st.button("🚀 アップロードしたCSVを現在のマスターに統合・復元する", type="primary"):
-                current_master = pd.read_csv(MASTER_FILE) if os.path.exists(MASTER_FILE) else pd.DataFrame()
-                combined = pd.concat([current_master, uploaded_df], ignore_index=True).drop_duplicates(subset=['店舗名'], keep='first')
-                combined.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
-                added_count = len(combined) - len(current_master)
-                st.success(f"【統合完了】マスターデータを合流しました！（新規追加: {added_count}件 / 重複スキップ）")
-                st.rerun()
-        except Exception as e:
-            st.error(f"ファイルの読み込みに失敗しました: {e}")
+                        st.error(f"PDF生成中にエラーが発生しました: {e
