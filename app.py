@@ -47,6 +47,22 @@ def init_master():
         if "メール" not in df.columns:
             df["メール"] = ""
             updated = True
+            
+        # 備考欄のクリーニング（「公式HP/グルメサイト:」などのプレフィックスを除去し、純粋なURLにする）
+        if "備考" in df.columns:
+            def clean_remarks(val):
+                s = str(val).strip()
+                if not s or s in ['nan', '-', 'None']:
+                    return ""
+                # 「公式HP/グルメサイト:」などのプレフィックスを削除
+                cleaned = re.sub(r'^(公式HP/グルメサイト[:：]?\s*)', '', s)
+                return cleaned.strip()
+            
+            new_remarks = df["備考"].apply(clean_remarks)
+            if not (df["備考"] == new_remarks).all():
+                df["備考"] = new_remarks
+                updated = True
+
         if updated:
             df.to_csv(MASTER_FILE, index=False, encoding="utf-8-sig")
 
@@ -197,6 +213,9 @@ with main_tab1:
                         insta_link = website if (website and "instagram.com" in website) else f"https://www.instagram.com/explore/tags/{urllib.parse.quote(store_name)}/"
                         approach = "インスタDM" if insta_link else ("メール" if website else "郵送")
                         
+                        # 備考欄には純粋なURL（公式HP、なければ食べログ検索用URL）を格納する
+                        pure_website = website if website else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' 食べログ')}"
+                        
                         new_leads.append({
                             "取込日": today,
                             "郵便番号": postal_code,
@@ -209,7 +228,7 @@ with main_tab1:
                             "優先アプローチ": approach,
                             "ステータス": "未アプローチ",
                             "アプローチ結果": "-",
-                            "備考": website if website else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' 食べログ')}"
+                            "備考": pure_website
                         })
 
                     if not new_leads:
@@ -383,14 +402,14 @@ with main_tab2:
                     smtp_user = st.text_input("送信元メールアドレス (User)", value="fax@arkf.jp")
                 with col_s2:
                     smtp_password = st.text_input("メールパスワード", type="password", value="")
-                    mail_subject = st.text_input("メール件名", value="【水産事業部】業務用冷凍寿司ネタの直販会社です。価格比較検討ください。在庫豊富にあります！！")
+                    mail_subject = st.text_input("メール件名", value="【水産事業部】新鮮な海の幸のご案内・お取引のご相談")
                 
                 mail_body = st.text_area("メール本文", value="""平素は格別のご愛顧を賜り厚く御礼申し上げます。
 
 弊社㈱アークフィールド（千葉県市川市に所在）では冷凍すしネタをストックして直送にてご提供しております。
 ぜひ一度、サンプルやカタログをご覧ください。
 
-よろしくお願い申し上げます。詳しくは https://secure01.blue.shared-server.net/www.arkf.jp/index.html""")
+よろしくお願い申し上げます。詳しくは　https://secure01.blue.shared-server.net/www.arkf.jp/index.html""")
                 
                 send_button = st.form_submit_button("🚀 登録されているメールアドレスに一斉送信する")
                 
@@ -416,7 +435,9 @@ with main_tab2:
                                         msg['To'] = recipient
                                         msg['Subject'] = mail_subject
                                         
-                                        personalized_body = f"{store_name} ご担当者様\n\n" + mail_body
+                                        personalized_body = f"{store_name} ご担当者様
+
+" + mail_body
                                         msg.attach(MIMEText(personalized_body, 'plain'))
                                         
                                         server.sendmail(smtp_user, recipient, msg.as_string())
@@ -445,9 +466,9 @@ with main_tab2:
                         
                         # フォントの決定（ローカルWindows優先、なければNoto Sans JPを自動ダウンロード）
                         font_name = 'Helvetica'
-                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
+                        font_path = "C:\Windows\Fonts\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
+                            font_path = "C:\Windows\Fonts\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
