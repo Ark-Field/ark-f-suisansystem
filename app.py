@@ -238,7 +238,7 @@ with main_tab1:
 # ==========================================
 with main_tab2:
     st.subheader("📊 アプローチ管理・全体＆実行")
-    st.markdown("すべての店舗データを一覧で確認しながら、リンク（食べログ・公式HP等）の確認、各種修正やアプローチ結果の入力を行えます。")
+    st.markdown("すべての店舗データを一覧で確認しながら、各種修正やアプローチ結果の入力を行えます。")
     
     if os.path.exists(MASTER_FILE):
         target_df = pd.read_csv(MASTER_FILE)
@@ -261,8 +261,22 @@ with main_tab2:
         if '除外' not in target_df.columns:
             target_df.insert(0, '除外', False)
 
+        # 💡 【解決策】クリックして確実に別タブで開ける「リンク一発確認ビュー（st.dataframe）」を上部に配置！
+        with st.expander("🌐 【ここをクリック】食べログ・公式HP・インスタのリンクを1クリックで開く専用ビュー", expanded=True):
+            st.markdown("下のテーブルのリンク（URL）をクリックすると、**確実に別タブでサイトが開きます**。（※編集用テーブルは下部にあります）")
+            link_view_df = target_df[['店舗名', '優先アプローチ', 'インスタのリンク', '備考', '電話', '住所']].copy()
+            link_view_df.rename(columns={'備考': '公式HP/食べログ等'}, inplace=True)
+            st.dataframe(
+                link_view_df,
+                width="stretch",
+                column_config={
+                    "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", help="クリックして別タブで開く"),
+                    "公式HP/食べログ等": st.column_config.LinkColumn("公式HP/食べログ等", help="クリックして別タブで開く")
+                }
+            )
+
         st.markdown("---")
-        st.markdown("### 📝 全体一覧テーブル（クリック可能なリンク対応・直接編集可能）")
+        st.markdown("### 📝 全体編集テーブル（ステータス・アプローチ結果の入力・保存はこちら）")
         
         edited_master_df = st.data_editor(
             target_df,
@@ -271,8 +285,6 @@ with main_tab2:
             num_rows="fixed",
             column_config={
                 "除外": st.column_config.CheckboxColumn("除外", help="チェックを入れるとアプローチ対象から除外されます"),
-                "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", help="クリックして別タブでインスタを開く"),
-                "備考": st.column_config.LinkColumn("公式HP/食べログ等", help="クリックしてグルメサイトやHPを別タブで開く"),
                 "優先アプローチ": st.column_config.SelectboxColumn(
                     "優先アプローチ",
                     options=["インスタDM", "メール", "FAX", "郵送", "要確認"],
