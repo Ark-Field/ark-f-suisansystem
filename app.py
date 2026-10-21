@@ -89,7 +89,7 @@ def determine_approach(row):
 init_master()
 
 st.title("🌊 水産事業部：飲食店データ収集・アプローチ管理システム（完全統合版）")
-st.markdown("Google Places APIを使ったデータ収集、インスタ5件分割、SMTP一斉送信、長4封筒PDF宛名印刷、システムです。")
+st.markdown("Google Places APIを使ったデータ収集、インスタ5件分割、SMTP一斉送信、長4封筒PDF宛名印刷システムです。")
 
 # 共通：今週の取得件数を計算してトップにアラート表示する関数
 def check_weekly_alert():
@@ -426,9 +426,9 @@ with main_tab2:
                         envelope_height = 90 * mm
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
-                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
+                        font_path = "C:\Windows\Fonts\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
+                            font_path = "C:\Windows\Fonts\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
