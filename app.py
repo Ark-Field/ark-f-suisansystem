@@ -383,7 +383,7 @@ with main_tab2:
                     smtp_user = st.text_input("送信元メールアドレス (User)", value="fax@arkf.jp")
                 with col_s2:
                     smtp_password = st.text_input("メールパスワード", type="password", value="")
-                    mail_subject = st.text_input("メール件名", value="【水産事業部】新鮮な海の幸のご案内・お取引のご相談")
+                    mail_subject = st.text_input("メール件名", value="【水産事業部】業務用冷凍寿司ネタの直販会社です。価格比較検討ください。在庫豊富にあります！！")
                 
                 mail_body = st.text_area("メール本文", value="""平素は格別のご愛顧を賜り厚く御礼申し上げます。
 
