@@ -48,7 +48,7 @@ def init_master():
             df["メール"] = ""
             updated = True
             
-        # 備考欄のクリーニング（「公式HP/グルメサイト:」などのプレフィックスを除去し、純粋なURLにする）
+        # 備考欄のクリーニング
         if "備考" in df.columns:
             def clean_remarks(val):
                 s = str(val).strip()
@@ -64,6 +64,15 @@ def init_master():
 
         if updated:
             df.to_csv(MASTER_FILE, index=False, encoding="utf-8-sig")
+
+def load_master_dataframe():
+    if os.path.exists(MASTER_FILE):
+        df = pd.read_csv(MASTER_FILE, dtype=str) # すべて文字列として読み込むことで、メールや郵便番号、電話番号が数値型になってしまうのを防ぐ
+    else:
+        df = pd.DataFrame(columns=[
+            "取込日", "郵便番号", "店舗名", "住所", "電話", "FAX", "メール", "インスタのリンク", "優先アプローチ", "ステータス", "アプローチ結果", "備考"
+        ])
+    return df
 
 def format_phone_number(phone_str):
     if not phone_str or phone_str in ['nan', '-', '']:
@@ -109,7 +118,7 @@ st.markdown("Google Places APIを使ったデータ収集、インスタ5件分�
 # 共通：今週の取得件数を計算してトップにアラート表示する関数
 def check_weekly_alert():
     if os.path.exists(MASTER_FILE):
-        df = pd.read_csv(MASTER_FILE)
+        df = load_master_dataframe()
         if not df.empty and '取込日' in df.columns:
             try:
                 df['取込日_dt'] = pd.to_datetime(df['取込日'], errors='coerce')
@@ -151,7 +160,7 @@ with main_tab1:
             st.error("【エラー】APIキーを入力してください。")
         else:
             init_master()
-            master_df = pd.read_csv(MASTER_FILE)
+            master_df = load_master_dataframe()
             today = datetime.date.today().strftime('%Y-%m-%d')
             
             url = "https://places.googleapis.com/v1/places:searchText"
@@ -212,7 +221,6 @@ with main_tab1:
                         insta_link = website if (website and "instagram.com" in website) else f"https://www.instagram.com/explore/tags/{urllib.parse.quote(store_name)}/"
                         approach = "インスタDM" if insta_link else ("メール" if website else "郵送")
                         
-                        # 備考欄には純粋なURL（公式HP、なければ食べログ検索用URL）を格納する
                         pure_website = website if website else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' 食べログ')}"
                         
                         new_leads.append({
@@ -258,10 +266,7 @@ with main_tab2:
     st.subheader("📊 アプローチ管理・全体＆実行")
     st.markdown("すべての店舗データを一覧で確認しながら、各種修正やアプローチ結果の入力を行えます。")
     
-    if os.path.exists(MASTER_FILE):
-        target_df = pd.read_csv(MASTER_FILE)
-    else:
-        target_df = pd.DataFrame()
+    target_df = load_master_dataframe()
 
     if target_df.empty:
         st.warning("マスターデータベースがまだありません。タブ1（データ収集）でデータを取得してください。")
@@ -279,7 +284,7 @@ with main_tab2:
         if '除外' not in target_df.columns:
             target_df.insert(0, '除外', False)
 
-        # 💡 【解決策】クリックして確実に別タブで開ける「リンク一発確認ビュー（st.dataframe）」を上部に配置！
+        # リンク一発確認ビュー
         with st.expander("🌐 【ここをクリック】食べログ・公式HP・インスタのリンクを1クリックで開く専用ビュー", expanded=True):
             st.markdown("下のテーブルのリンク（URL）をクリックすると、**確実に別タブでサイトが開きます**。（※編集用テーブルは下部にあります）")
             link_view_df = target_df[['店舗名', '優先アプローチ', 'インスタのリンク', '備考', '電話', '住所']].copy()
@@ -303,6 +308,10 @@ with main_tab2:
             num_rows="fixed",
             column_config={
                 "除外": st.column_config.CheckboxColumn("除外", help="チェックを入れるとアプローチ対象から除外されます"),
+                "メール": st.column_config.TextColumn("メール", help="メールアドレスを入力"),
+                "郵便番号": st.column_config.TextColumn("郵便番号", help="郵便番号を入力"),
+                "電話": st.column_config.TextColumn("電話", help="電話番号を入力"),
+                "FAX": st.column_config.TextColumn("FAX", help="FAX番号を入力"),
                 "優先アプローチ": st.column_config.SelectboxColumn(
                     "優先アプローチ",
                     options=["インスタDM", "メール", "FAX", "郵送", "要確認"],
@@ -461,7 +470,6 @@ with main_tab2:
                         envelope_height = 90 * mm
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
-                        # フォントの決定（ローカルWindows優先、なければNoto Sans JPを自動ダウンロード）
                         font_name = 'Helvetica'
                         font_path = "C:\Windows\Fonts\meiryo.ttc"
                         if not os.path.exists(font_path):
@@ -471,7 +479,6 @@ with main_tab2:
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
                             font_name = 'JapaneseFont'
                         else:
-                            # Streamlit Cloud (Linux) 環境では Noto Sans JP を自動取得
                             noto_font_path = "NotoSansJP-Regular.ttf"
                             if not os.path.exists(noto_font_path):
                                 font_url = "https://github.com/google/fonts/raw/main/ofl/notosansjp/NotoSansJP-Regular.ttf"
@@ -531,7 +538,7 @@ with main_tab3_obj:
     st.subheader("📊 累計マスターデータベース管理・バックアップ・読込")
     
     if os.path.exists(MASTER_FILE):
-        master_df = pd.read_csv(MASTER_FILE)
+        master_df = load_master_dataframe()
         st.info(f"現在のマスター登録総数: **{len(master_df)}件**")
         
         search_query = st.text_input("マスター内を店舗名で検索・絞り込み", "", key="master_search")
@@ -554,15 +561,15 @@ with main_tab3_obj:
 
     st.markdown("---")
     st.markdown("### 🔄 マスターCSVの読込（復元・追加統合）")
-    st.markdown("過去にダウンロードしたバックアップCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
+    st.markdown("過去にダウンロードしたバックupCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
     
     uploaded_file = st.file_uploader("マスターCSVファイルを選択", type=["csv"], key="master_uploader")
     if uploaded_file is not None:
         try:
-            uploaded_df = pd.read_csv(uploaded_file)
+            uploaded_df = pd.read_csv(uploaded_file, dtype=str)
             st.markdown(f"選択されたファイル内のデータ件数: **{len(uploaded_df)}件**")
             if st.button("🚀 アップロードしたCSVを現在のマスターに統合・復元する", type="primary"):
-                current_master = pd.read_csv(MASTER_FILE) if os.path.exists(MASTER_FILE) else pd.DataFrame()
+                current_master = load_master_dataframe() if os.path.exists(MASTER_FILE) else pd.DataFrame()
                 combined = pd.concat([current_master, uploaded_df], ignore_index=True).drop_duplicates(subset=['店舗名'], keep='first')
                 combined.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
                 added_count = len(combined) - len(current_master)
