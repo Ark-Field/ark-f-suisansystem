@@ -88,10 +88,10 @@ def determine_approach(row):
 
 init_master()
 
-st.title("🌊 水産事業部：飲食店データ収集・アプローチ管理システム（統合版）")
-st.markdown("Google Places APIを使った飲食店データの自動収集、郵便番号付きマスター管理、長4封筒PDF宛名出力機能を備えた統合システムです。")
+st.title("🌊 水産事業部：飲食店データ収集・アプローチ管理システム（完全統合版）")
+st.markdown("Google Places APIを使ったデータ収集、郵便番号付きマスター管理、インスタ5件分割、SMTP一斉送信、長4封筒PDF宛名印刷をひとつにまとめたシステムです。")
 
-main_tab1, main_tab2, main_tab3 = st.tabs(["🔍 1. データ収集（API）", "📊 2. アプローチ管理・PDF宛名印刷", "📁 3. 累計マスターデータベース"])
+main_tab1, main_tab2, main_tab3 = st.tabs(["🔍 1. データ収集（API）", "📊 2. アプローチ管理・実行ダッシュボード", "📁 3. 累計マスターデータベース"])
 
 # ==========================================
 # タブ1: データ収集（API）
@@ -213,11 +213,11 @@ with main_tab1:
                             )
 
 # ==========================================
-# タブ2: アプローチ管理・PDF宛名印刷
+# タブ2: アプローチ管理・実行ダッシュボード
 # ==========================================
 with main_tab2:
-    st.subheader("📊 アプローチ管理・長4封筒PDF宛名印刷ダッシュボード")
-    st.markdown("すべての店舗データを一覧で確認しながら、**郵便番号の入力・修正、アプローチ方法の変更、長4封筒用PDFの直接出力**が行えます。")
+    st.subheader("📊 アプローチ管理・全体俯瞰＆実行ダッシュボード")
+    st.markdown("すべての店舗データを一覧で確認しながら、**郵便番号・電話・FAX・メールの修正、アプローチ方法の変更、結果の入力**を行い、各種アクションを実行できます。")
     
     if os.path.exists(MASTER_FILE):
         target_df = pd.read_csv(MASTER_FILE)
@@ -241,7 +241,7 @@ with main_tab2:
             target_df.insert(0, '除外', False)
 
         st.markdown("---")
-        st.markdown("### 📝 全体一覧テーブル（郵便番号・宛先等の直接編集が可能）")
+        st.markdown("### 📝 全体一覧テーブル（直接編集して保存できます）")
         
         edited_master_df = st.data_editor(
             target_df,
@@ -385,20 +385,16 @@ with main_tab2:
             if not post_sub.empty:
                 st.dataframe(post_sub[['郵便番号', '店舗名', '住所']], width="stretch")
                 
-                # 長4封筒PDF生成ボタン
                 if st.button("🖨️ 選択中店舗の長4封筒用 宛名PDFを生成する", type="primary", key="btn_gen_pdf"):
                     try:
                         buffer = BytesIO()
-                        # 長4封筒サイズ: 幅 205mm × 高さ 90mm (横長封筒)
-                        # ReportLabのキャンバス作成
                         envelope_width = 205 * mm
                         envelope_height = 90 * mm
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
-                        # フォント登録（Windows環境用）
-                        font_path = "C:\Windows\Fonts\meiryo.ttc"
+                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\Windows\Fonts\msgothic.ttc"
+                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
@@ -414,19 +410,16 @@ with main_tab2:
                             c.saveState()
                             c.setFont(font_name, 12)
                             
-                            # 郵便番号 (右上あたり、または適度な位置)
                             if p_code and p_code != 'nan':
                                 c.drawString(120 * mm, 70 * mm, f"〒 {p_code}")
                             
-                            # 住所 (中央やや上)
                             c.setFont(font_name, 11)
                             c.drawString(40 * mm, 50 * mm, address)
                             
-                            # 店舗名 (中央大文字)
                             c.setFont(font_name, 16)
                             c.drawString(45 * mm, 32 * mm, f"{store_name} 御中")
                             
-                            c.showPage() # 次の封筒（ページ）へ
+                            c.showPage()
                             c.restoreState()
                         
                         c.save()
