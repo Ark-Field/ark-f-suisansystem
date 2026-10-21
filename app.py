@@ -54,7 +54,6 @@ def init_master():
                 s = str(val).strip()
                 if not s or s in ['nan', '-', 'None']:
                     return ""
-                # 「公式HP/グルメサイト:」などのプレフィックスを削除
                 cleaned = re.sub(r'^(公式HP/グルメサイト[:：]?\s*)', '', s)
                 return cleaned.strip()
             
@@ -284,13 +283,13 @@ with main_tab2:
         with st.expander("🌐 【ここをクリック】食べログ・公式HP・インスタのリンクを1クリックで開く専用ビュー", expanded=True):
             st.markdown("下のテーブルのリンク（URL）をクリックすると、**確実に別タブでサイトが開きます**。（※編集用テーブルは下部にあります）")
             link_view_df = target_df[['店舗名', '優先アプローチ', 'インスタのリンク', '備考', '電話', '住所']].copy()
-            link_view_df.rename(columns={'備考': '公式HP/食べログ等'}, inplace=True)
+            link_view_df.rename(columns={'備考': 'WEBサイト'}, inplace=True)
             st.dataframe(
                 link_view_df,
                 width="stretch",
                 column_config={
                     "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", help="クリックして別タブで開く"),
-                    "公式HP/食べログ等": st.column_config.LinkColumn("公式HP/食べログ等", help="クリックして別タブで開く")
+                    "WEBサイト": st.column_config.LinkColumn("WEBサイト", help="クリックして別タブで開く")
                 }
             )
 
@@ -435,7 +434,7 @@ with main_tab2:
                                         msg['To'] = recipient
                                         msg['Subject'] = mail_subject
                                         
-                                        personalized_body = f"{store_name} ご担当者様
+                                        personalized_body = store_name + " ご担当者様
 
 " + mail_body
                                         msg.attach(MIMEText(personalized_body, 'plain'))
