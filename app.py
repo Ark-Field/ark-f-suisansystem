@@ -501,4 +501,54 @@ with main_tab2:
                             key="download_pdf_chou4"
                         )
                     except Exception as e:
-                        st.error(f"PDF生成中にエラーが発生しました: {e
+                        st.error(f"PDF生成中にエラーが発生しました: {e}")
+            else:
+                st.info("そのほかの郵送対象店舗はありません。")
+
+# ==========================================
+# タブ3: 累計マスターデータベース確認＆読込
+# ==========================================
+main_tab3_obj = main_tab3
+with main_tab3_obj:
+    st.subheader("📊 累計マスターデータベース管理・バックアップ・読込")
+    
+    if os.path.exists(MASTER_FILE):
+        master_df = pd.read_csv(MASTER_FILE)
+        st.info(f"現在のマスター登録総数: **{len(master_df)}件**")
+        
+        search_query = st.text_input("マスター内を店舗名で検索・絞り込み", "", key="master_search")
+        if search_query:
+            filtered_df = master_df[master_df['店舗名'].str.contains(search_query, na=False)]
+            st.dataframe(filtered_df, width="stretch")
+        else:
+            st.dataframe(master_df, width="stretch")
+            
+        with open(MASTER_FILE, "rb") as f:
+            st.download_button(
+                label="📥 累計マスターCSV（全データ）をダウンロード",
+                data=f,
+                file_name=MASTER_FILE,
+                mime="text/csv",
+                key="dl_master_all"
+            )
+    else:
+        st.info("まだマスターデータベースが存在しません。タブ1（データ収集）からデータを取得するか、下からCSVをアップロードしてください。")
+
+    st.markdown("---")
+    st.markdown("### 🔄 マスターCSVの読込（復元・追加統合）")
+    st.markdown("過去にダウンロードしたバックアップCSVファイルをアップロードすると、現在のマスターに重複を除外しながらデータを自動で合流・追加できます。")
+    
+    uploaded_file = st.file_uploader("マスターCSVファイルを選択", type=["csv"], key="master_uploader")
+    if uploaded_file is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded_file)
+            st.markdown(f"選択されたファイル内のデータ件数: **{len(uploaded_df)}件**")
+            if st.button("🚀 アップロードしたCSVを現在のマスターに統合・復元する", type="primary"):
+                current_master = pd.read_csv(MASTER_FILE) if os.path.exists(MASTER_FILE) else pd.DataFrame()
+                combined = pd.concat([current_master, uploaded_df], ignore_index=True).drop_duplicates(subset=['店舗名'], keep='first')
+                combined.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
+                added_count = len(combined) - len(current_master)
+                st.success(f"【統合完了】マスターデータを合流しました！（新規追加: {added_count}件 / 重複スキップ）")
+                st.rerun()
+        except Exception as e:
+            st.error(f"ファイルの読み込みに失敗しました: {e}")
