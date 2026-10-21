@@ -434,9 +434,7 @@ with main_tab2:
                                         msg['To'] = recipient
                                         msg['Subject'] = mail_subject
                                         
-                                        personalized_body = store_name + " ご担当者様
-
-" + mail_body
+                                        personalized_body = store_name + " ご担当者様\n\n" + mail_body
                                         msg.attach(MIMEText(personalized_body, 'plain'))
                                         
                                         server.sendmail(smtp_user, recipient, msg.as_string())
