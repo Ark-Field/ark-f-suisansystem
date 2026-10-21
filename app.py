@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from io import BytesIO
 
-# ReportLab imports for PDF generation (修正：mmは reportlab.lib.units からインポート)
+# ReportLab imports for PDF generation
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -310,7 +310,13 @@ with main_tab2:
             st.markdown(f"対象店舗数: **{len(fax_sub)}件**")
             if not fax_sub.empty:
                 csv_data = fax_sub[['店舗名', 'FAX', '住所']].to_csv(index=False, encoding='utf-8-sig')
-                st.download_button("📠 FAX送信対象リストをCSVダウンロード", data=csv_data, file_name="fax_target_list.csv", mime="text/csv", key="dl_fax_all")
+                st.download_button(
+                    label=f"📠 FAX送信対象リスト（{len(fax_sub)}件）をCSVダウンロード",
+                    data=csv_data,
+                    file_name="fax_target_list.csv",
+                    mime="text/csv",
+                    key="dl_fax_all"
+                )
             else:
                 st.info("対象のFAX店舗はありません。")
 
@@ -392,9 +398,9 @@ with main_tab2:
                         envelope_height = 90 * mm
                         c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
                         
-                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
+                        font_path = "C:\Windows\Fonts\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
+                            font_path = "C:\Windows\Fonts\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
