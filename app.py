@@ -534,7 +534,23 @@ with main_tab2:
                                 if p_code and p_code != 'nan':
                                     c.drawString(55 * mm, 130 * mm, f"〒 {p_code}")
                                 c.setFont(font_name, 10)
-                                c.drawString(12 * mm, 105 * mm, address)
+                                
+                                # ハガキの住所自動改行処理（丁目・番地・ハイフンなどの区切り、または文字数で分割）
+                                line1, line2 = address, ""
+                                match = re.search(r'(.*?[0-9０-９]+丁目|.*?[0-9０-９]+番地?|.*?[0-9０-９]+-[0-9０-９]+)(.*)', address)
+                                if match:
+                                    line1 = match.group(1).strip()
+                                    line2 = match.group(2).strip()
+                                elif len(address) > 15:
+                                    line1 = address[:15]
+                                    line2 = address[15:]
+                                
+                                if line2:
+                                    c.drawString(12 * mm, 105 * mm, line1)
+                                    c.drawString(12 * mm, 95 * mm, line2)
+                                else:
+                                    c.drawString(12 * mm, 105 * mm, address)
+                                    
                                 c.setFont(font_name, 14)
                                 c.drawString(18 * mm, 75 * mm, f"{store_name} 御中")
                                 
