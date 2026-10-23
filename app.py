@@ -552,7 +552,18 @@ with main_tab2:
                                     c.drawString(12 * mm, 105 * mm, address)
                                     
                                 c.setFont(font_name, 14)
-                                c.drawString(18 * mm, 75 * mm, f"{store_name} 御中")
+                                # 店舗名（お客様名）が13文字以上の場合は分割して改行表示する
+                                full_name = f"{store_name} 御中"
+                                if len(store_name) >= 13:
+                                    # 適切な位置（例：12文字目付近、またはスペースなど）で分割、あるいは単純に分割
+                                    # ここでは安全に12文字で分割
+                                    s_line1 = store_name[:12]
+                                    s_line2 = store_name[12:] + " 御中"
+                                    c.drawString(18 * mm, 75 * mm, s_line1)
+                                    c.setFont(font_name, 12) # 少しフォントを落とすか調整
+                                    c.drawString(18 * mm, 64 * mm, s_line2)
+                                else:
+                                    c.drawString(18 * mm, 75 * mm, full_name)
                                 
                             c.restoreState()
                             c.showPage()
