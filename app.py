@@ -284,6 +284,18 @@ with main_tab2:
         if '除外' not in target_df.columns:
             target_df.insert(0, '除外', False)
 
+        # 列の並び替え（取込日の隣に 優先アプローチ、ステータス、アプローチ結果 を配置）
+        desired_cols = [
+            '除外', '取込日', '優先アプローチ', 'ステータス', 'アプローチ結果',
+            '郵便番号', '店舗名', '住所', '電話', 'FAX', 'メール', 'インスタのリンク', '備考'
+        ]
+        # 既存のDataFrameに存在する列のみを抽出、残りの列があれば後ろに追加
+        actual_cols = [c for c in desired_cols if c in target_df.columns]
+        for c in target_df.columns:
+            if c not in actual_cols:
+                actual_cols.append(c)
+        target_df = target_df[actual_cols]
+
         # リンク一発確認ビュー
         with st.expander("🌐 【ここをクリック】食べログ・公式HP・インスタのリンクを1クリックで開く専用ビュー", expanded=True):
             st.markdown("下のテーブルのリンク（URL）をクリックすると、**確実に別タブでサイトが開きます**。（※編集用テーブルは下部にあります）")
@@ -480,9 +492,9 @@ with main_tab2:
                         c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
                         
                         font_name = 'Helvetica'
-                        font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
+                        font_path = "C:\Windows\Fonts\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\\Windows\\Fonts\\msgothic.ttc"
+                            font_path = "C:\Windows\Fonts\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
