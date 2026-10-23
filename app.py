@@ -1,4 +1,4 @@
-final_fix_code = '''import streamlit as st
+import streamlit as st
 import requests
 import pandas as pd
 import datetime
@@ -77,14 +77,14 @@ def load_master_dataframe():
 def format_phone_number(phone_str):
     if not phone_str or phone_str in ['nan', '-', '']:
         return ""
-    formatted = re.sub(r'^\\+81\\s?', '0', phone_str.strip())
+    formatted = re.sub(r'^\+81\s?', '0', phone_str.strip())
     formatted = formatted.replace(" ", "-").replace("--", "-")
     return formatted
 
 def format_address(address_str):
     if not address_str:
         return ""
-    cleaned = re.sub(r'^(日本|Japan)[,、\\s]*', '', address_str.strip())
+    cleaned = re.sub(r'^(日本|Japan)[,、\s]*', '', address_str.strip())
     return cleaned.strip()
 
 def extract_postal_code(address_str):
@@ -113,7 +113,7 @@ def determine_approach(row):
 init_master()
 
 st.title("🌊 水産事業部：飲食店データ収集・アプローチ管理システム（完全統合版）")
-st.markdown("Google Places APIを使ったデータ収集、インスタ5件分割、SMTP一斉送信、長4封筒PDF宛名印刷システムです。")
+st.markdown("Google Places APIを使ったデータ収集、インスタ一括オープン、SMTP一斉送信、長4封筒＆ハガキ宛名印刷システムです。")
 
 # 共通：今週の取得件数を計算してトップにアラート表示する関数
 def check_weekly_alert():
@@ -249,7 +249,7 @@ with main_tab1:
                         updated_master.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
                         
                         st.success(f"【完了】新規の店舗 {len(new_df)}件 を取得し、マスターに追加しました！（既存重複除外: {skipped_count}件）")
-                        st.dataframe(new_df, width="stretch")
+                        st.dataframe(new_df, use_container_width=True)
                         
                         with open(weekly_filename, "rb") as f:
                             st.download_button(
@@ -291,7 +291,7 @@ with main_tab2:
             link_view_df.rename(columns={'備考': 'WEBサイト'}, inplace=True)
             st.dataframe(
                 link_view_df,
-                width="stretch",
+                use_container_width=True,
                 column_config={
                     "インスタのリンク": st.column_config.LinkColumn("インスタのリンク", help="クリックして別タブで開く"),
                     "WEBサイト": st.column_config.LinkColumn("WEBサイト", help="クリックして別タブで開く")
@@ -304,7 +304,7 @@ with main_tab2:
         edited_master_df = st.data_editor(
             target_df,
             key="master_full_editor",
-            width="stretch",
+            use_container_width=True,
             num_rows="fixed",
             column_config={
                 "除外": st.column_config.CheckboxColumn("除外", help="チェックを入れるとアプローチ対象から除外されます"),
@@ -340,7 +340,7 @@ with main_tab2:
         st.markdown("---")
         st.subheader("🚀 手法別・実行アクション")
 
-        exec_tabs = st.tabs(["🔗 インスタDM（3分の1幅でコンパクト配置）", "📠 FAXリスト", "✉️ SMTPメール送信", "🖨️ 郵送・長4封筒PDF"])
+        exec_tabs = st.tabs(["🔗 インスタDM", "📠 FAXリスト", "✉️ SMTPメール送信", "🖨️ 郵送・宛名印刷（長4封筒 ＆ ハガキ）"])
 
         with exec_tabs[0]:
             insta_sub = active_df[active_df['優先アプローチ'] == 'インスタDM']
@@ -357,20 +357,16 @@ with main_tab2:
             if not insta_rows:
                 st.info("対象のインスタDMリンクがありません。")
             else:
-                col_left, col_mid, col_right = st.columns([1, 1, 1])
-                with col_left:
-                    st.markdown("##### 📌 インスタ一括オープン（5件ずつ）")
-                    chunk_size = 5
-                    for i in range(0, len(insta_rows), chunk_size):
-                        chunk = insta_rows[i:i+chunk_size]
-                        s_idx = i + 1
-                        e_idx = min(i + chunk_size, len(insta_rows))
-                        if st.button(f"🔗 インスタを開く: 第 {s_idx} 〜 {e_idx} 件目（{len(chunk)}件）", key=f"btn_chunk_{i}"):
-                            for name, lk in chunk:
-                                webbrowser.open(lk)
-                            st.success(f"{s_idx} 〜 {e_idx} 件目のリンクを開きました！")
-                with col_mid:
-                    st.info("💡 **ヒント**: 左のボタンを押すと、ブラウザに5件ずつInstagramのページが別タブで立ち上がります。")
+                st.markdown("##### 📌 5件ずつのグループ（クリックで別タブが確実に開きます）")
+                chunk_size = 5
+                for i in range(0, len(insta_rows), chunk_size):
+                    chunk = insta_rows[i:i+chunk_size]
+                    s_idx = i + 1
+                    e_idx = min(i + chunk_size, len(insta_rows))
+                    
+                    with st.expander(f"📁 第 {s_idx} 〜 {e_idx} 件目（{len(chunk)}店舗）を表示", expanded=(i == 0)):
+                        for name, lk in chunk:
+                            st.link_button(f"🔗 {name} のインスタを開く", lk)
 
         with exec_tabs[1]:
             fax_sub = active_df[active_df['優先アプローチ'] == 'FAX']
@@ -398,7 +394,7 @@ with main_tab2:
                     valid_mails.append((row.get('店舗名', ''), m))
             
             if not mail_sub.empty:
-                st.dataframe(mail_sub[['店舗名', 'メール', '備考']], width="stretch")
+                st.dataframe(mail_sub[['店舗名', 'メール', '備考']], use_container_width=True)
             
             st.markdown("---")
             st.markdown("### ⚙️ SMTPメール自動送信設定（暗号化なし対応）")
@@ -446,7 +442,7 @@ with main_tab2:
                                         msg['To'] = recipient
                                         msg['Subject'] = mail_subject
                                         
-                                        personalized_body = store_name + " ご担当者様\\n\\n" + mail_body
+                                        personalized_body = store_name + " ご担当者様\n\n" + mail_body
                                         msg.attach(MIMEText(personalized_body, 'plain'))
                                         
                                         server.sendmail(smtp_user, recipient, msg.as_string())
@@ -464,14 +460,24 @@ with main_tab2:
             st.markdown(f"対象店舗数: **{len(post_sub)}件**")
             
             if not post_sub.empty:
-                st.dataframe(post_sub[['郵便番号', '店舗名', '住所']], width="stretch")
+                st.dataframe(post_sub[['郵便番号', '店舗名', '住所']], use_container_width=True)
                 
-                if st.button("🖨️ 選択中店舗の長4封筒用 宛名PDFを生成する", type="primary", key="btn_gen_pdf"):
+                print_type = st.radio("印刷用紙の選択", ["長4封筒 (205 x 90 mm)", "ハガキ (100 x 148 mm)"], horizontal=True)
+                
+                if st.button("🖨️ 選択中店舗の宛名PDFを生成する", type="primary", key="btn_gen_pdf"):
                     try:
                         buffer = BytesIO()
-                        envelope_width = 205 * mm
-                        envelope_height = 90 * mm
-                        c = canvas.Canvas(buffer, pagesize=(envelope_width, envelope_height))
+                        
+                        if print_type.startswith("長4"):
+                            page_width = 205 * mm
+                            page_height = 90 * mm
+                            is_envelope = True
+                        else:
+                            page_width = 100 * mm
+                            page_height = 148 * mm
+                            is_envelope = False
+                            
+                        c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
                         
                         font_name = 'Helvetica'
                         font_path = "C:\\Windows\\Fonts\\meiryo.ttc"
@@ -492,7 +498,7 @@ with main_tab2:
                                             f_font.write(r.content)
                                 except Exception:
                                     pass
-                            
+                        
                             if os.path.exists(noto_font_path):
                                 pdfmetrics.registerFont(TTFont('NotoSansJP', noto_font_path))
                                 font_name = 'NotoSansJP'
@@ -503,30 +509,37 @@ with main_tab2:
                             address = str(row.get('住所', '')).strip()
                             
                             c.saveState()
-                            c.setFont(font_name, 12)
+                            c.setFont(font_name, 11 if is_envelope else 10)
                             
-                            if p_code and p_code != 'nan':
-                                c.drawString(120 * mm, 70 * mm, f"〒 {p_code}")
-                            
-                            c.setFont(font_name, 11)
-                            c.drawString(40 * mm, 50 * mm, address)
-                            
-                            c.setFont(font_name, 16)
-                            c.drawString(45 * mm, 32 * mm, f"{store_name} 御中")
-                            
+                            if is_envelope:
+                                if p_code and p_code != 'nan':
+                                    c.drawString(120 * mm, 70 * mm, f"〒 {p_code}")
+                                c.setFont(font_name, 11)
+                                c.drawString(40 * mm, 50 * mm, address)
+                                c.setFont(font_name, 16)
+                                c.drawString(45 * mm, 32 * mm, f"{store_name} 御中")
+                            else:
+                                if p_code and p_code != 'nan':
+                                    c.drawString(55 * mm, 130 * mm, f"〒 {p_code}")
+                                c.setFont(font_name, 10)
+                                c.drawString(12 * mm, 105 * mm, address)
+                                c.setFont(font_name, 14)
+                                c.drawString(18 * mm, 75 * mm, f"{store_name} 御中")
+                                
                             c.restoreState()
                             c.showPage()
                         
                         c.save()
                         buffer.seek(0)
                         
-                        st.success("長4封筒用宛名PDFの生成が完了しました！（文字化け防止対応済み）")
+                        label_name = "長4封筒" if is_envelope else "ハガキ"
+                        st.success(f"{label_name}用宛名PDFの生成が完了しました！（文字化け防止対応済み）")
                         st.download_button(
-                            label="📥 長4封筒 宛名PDFをダウンロードする",
+                            label=f"📥 {label_name} 宛名PDFをダウンロードする",
                             data=buffer,
-                            file_name="envelope_addresses_chou4.pdf",
+                            file_name=f"envelope_addresses_{'chou4' if is_envelope else 'postcard'}.pdf",
                             mime="application/pdf",
-                            key="download_pdf_chou4"
+                            key=f"download_pdf_{'chou4' if is_envelope else 'postcard'}"
                         )
                     except Exception as e:
                         st.error(f"PDF生成中にエラーが発生しました: {e}")
@@ -547,16 +560,16 @@ with main_tab3_obj:
         search_query = st.text_input("マスター内を店舗名で検索・絞り込み", "", key="master_search")
         if search_query:
             filtered_df = master_df[master_df['店舗名'].str.contains(search_query, na=False)]
-            st.dataframe(filtered_df, width="stretch")
+            st.dataframe(filtered_df, use_container_width=True)
         else:
-            st.dataframe(master_df, width="stretch")
+            st.dataframe(master_df, use_container_width=True)
             
         with open(MASTER_FILE, "rb") as f:
             st.download_button(
                 label="📥 累計マスターCSV（全データ）をダウンロード",
                 data=f,
                 file_name=MASTER_FILE,
-                mime="text/css" if False else "text/csv",
+                mime="text/csv",
                 key="dl_master_all"
             )
     else:
@@ -580,9 +593,3 @@ with main_tab3_obj:
                 st.rerun()
         except Exception as e:
             st.error(f"ファイルの読み込みに失敗しました: {e}")
-'''
-
-with open("app.py", "w", encoding="utf-8") as f:
-    f.write(final_fix_code)
-
-print("Syntax error successfully fixed.")
