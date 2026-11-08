@@ -115,7 +115,7 @@ init_master()
 st.title("🌊 水産事業部：飲食店データ収集・アプローチ管理システム（完全統合版）")
 st.markdown("Google Places APIを使ったデータ収集、インスタ一括オープン、SMTP一斉送信、長4封筒＆ハガキ宛名印刷システムです。")
 
-# 共通：今週の取得件数を計算してトップにアラート表示する関数
+# 共通：今週の取得件数を計算してトップにアラート表示する関数（週100件対応）
 def check_weekly_alert():
     if os.path.exists(MASTER_FILE):
         df = load_master_dataframe()
@@ -127,10 +127,10 @@ def check_weekly_alert():
                 this_week_df = df[df['取込日_dt'].dt.date >= start_of_week]
                 this_week_count = len(this_week_df)
                 
-                if this_week_count > 50:
-                    st.warning(f"🚨 **【今週のペース超過アラート】** 今週すでに新規データが **{this_week_count}件** 登録されています（50件オーバー）。アプローチの進捗やAPI利用状況をご確認ください！")
+                if this_week_count > 100:
+                    st.warning(f"🚨 **【今週のペース超過アラート】** 今週すでに新規データが **{this_week_count}件** 登録されています（100件オーバー）。アプローチの進捗やAPI利用状況をご確認ください！")
                 else:
-                    st.info(f"📊 **今週の登録状況**: 現在 **{this_week_count}件** / 目安50件")
+                    st.info(f"📊 **今週の登録状況**: 現在 **{this_week_count}件** / 目安100件")
             except Exception:
                 pass
 
@@ -151,7 +151,7 @@ with main_tab1:
         area_input = st.text_input("エリア（例: 本八幡、銀座、新橋）", value="中央区")
     with col2:
         keyword_input = st.text_input("キーワード（例: 海鮮居酒屋、寿司、宅配）", value="海鮮居酒屋")
-        target_count = st.slider("取得目標件数", min_value=5, max_value=50, value=25, step=5)
+        target_count = st.slider("取得目標件数", min_value=5, max_value=100, value=50, step=5)
         
     execute_btn = st.button("データを収集する", type="primary", key="btn_fetch_api")
     
@@ -218,8 +218,9 @@ with main_tab1:
                             skipped_count += 1
                             continue
                             
-                        insta_link = website if (website and "instagram.com" in website) else f"https://www.instagram.com/explore/tags/{urllib.parse.quote(store_name)}/"
-                        approach = "インスタDM" if insta_link else ("メール" if website else "郵送")
+                        # 【修正】日本語店舗名の％エンコードエラーを防ぐため、Googleでのインスタ検索リンクに変更
+                        insta_link = website if (website and "instagram.com" in website) else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' インスタグラム')}"
+                        approach = "インスタDM" if (website and "instagram.com" in website) else ("メール" if website else "郵送")
                         
                         pure_website = website if website else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' 食べログ')}"
                         
@@ -284,12 +285,10 @@ with main_tab2:
         if '除外' not in target_df.columns:
             target_df.insert(0, '除外', False)
 
-        # 列の並び替え（取込日の隣に 優先アプローチ、ステータス、アプローチ結果 を配置）
         desired_cols = [
             '除外', '取込日', '優先アプローチ', 'ステータス', 'アプローチ結果',
             '郵便番号', '店舗名', '住所', '電話', 'FAX', 'メール', 'インスタのリンク', '備考'
         ]
-        # 既存のDataFrameに存在する列のみを抽出、残りの列があれば後ろに追加
         actual_cols = [c for c in desired_cols if c in target_df.columns]
         for c in target_df.columns:
             if c not in actual_cols:
@@ -350,9 +349,9 @@ with main_tab2:
         active_df = edited_master_df[edited_master_df['除外'] == False]
 
         st.markdown("---")
-        st.subheader("🚀 手法別・実行アクション")
+        st.markdown("### 🚀 手法別・実行アクション")
 
-        exec_tabs = st.tabs(["🔗 インスタDM", "📠 FAXリスト", "✉️ SMTPメール送信", "🖨️ 郵送・宛名印刷（長4封筒 ＆ ハガキ）"])
+        exec_tabs = st.tabs(["🔗 インスタ検索", "📠 FAXリスト", "✉️ SMTPメール送信", "🖨️ 郵送・宛名印刷（長4封筒 ＆ ハガキ）"])
 
         with exec_tabs[0]:
             insta_sub = active_df[active_df['優先アプローチ'] == 'インスタDM']
@@ -367,7 +366,7 @@ with main_tab2:
                     insta_rows.append((row.get('店舗名', ''), link))
             
             if not insta_rows:
-                st.info("対象のインスタDMリンクがありません。")
+                st.info("対象のインスタリンクがありません。")
             else:
                 st.markdown("##### 📌 5件ずつのグループ（クリックで別タブが確実に開きます）")
                 chunk_size = 5
@@ -378,7 +377,7 @@ with main_tab2:
                     
                     with st.expander(f"📁 第 {s_idx} 〜 {e_idx} 件目（{len(chunk)}店舗）を表示", expanded=(i == 0)):
                         for name, lk in chunk:
-                            st.link_button(f"🔗 {name} のインスタを開く", lk)
+                            st.link_button(f"🔗 {name} のインスタ検索を開く", lk)
 
         with exec_tabs[1]:
             fax_sub = active_df[active_df['優先アプローチ'] == 'FAX']
@@ -402,7 +401,7 @@ with main_tab2:
             valid_mails = []
             for _, row in mail_sub.iterrows():
                 m = str(row.get('メール', '')).strip()
-                if m and m not in ['', 'nan', '-', 'None', 'nan']:
+                if m and m not in ['', 'nan', '-', 'None']:
                     valid_mails.append((row.get('店舗名', ''), m))
             
             if not mail_sub.empty:
@@ -459,7 +458,7 @@ with main_tab2:
                                         
                                         server.sendmail(smtp_user, recipient, msg.as_string())
                                         success_count += 1
-                                    except Exception as e:
+                                    except Exception:
                                         fail_count += 1
                                         
                                 server.quit()
@@ -492,9 +491,9 @@ with main_tab2:
                         c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
                         
                         font_name = 'Helvetica'
-                        font_path = "C:\Windows\Fonts\meiryo.ttc"
+                        font_path = r"C:\Windows\Fonts\meiryo.ttc"
                         if not os.path.exists(font_path):
-                            font_path = "C:\Windows\Fonts\msgothic.ttc"
+                            font_path = r"C:\Windows\Fonts\msgothic.ttc"
                         
                         if os.path.exists(font_path):
                             pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
@@ -535,7 +534,6 @@ with main_tab2:
                                     c.drawString(55 * mm, 130 * mm, f"〒 {p_code}")
                                 c.setFont(font_name, 10)
                                 
-                                # ハガキの住所自動改行処理（丁目・番地・ハイフンなどの区切り、または文字数で分割）
                                 line1, line2 = address, ""
                                 match = re.search(r'(.*?[0-9０-９]+丁目|.*?[0-9０-９]+番地?|.*?[0-9０-９]+-[0-9０-９]+)(.*)', address)
                                 if match:
@@ -552,19 +550,16 @@ with main_tab2:
                                     c.drawString(12 * mm, 105 * mm, address)
                                     
                                 c.setFont(font_name, 14)
-                                # 店舗名（お客様名）が13文字以上の場合は分割して改行表示する
                                 full_name = f"{store_name} 御中"
                                 if len(store_name) >= 13:
-                                    # 適切な位置（例：12文字目付近、またはスペースなど）で分割、あるいは単純に分割
-                                    # ここでは安全に12文字で分割
                                     s_line1 = store_name[:12]
                                     s_line2 = store_name[12:] + " 御中"
                                     c.drawString(18 * mm, 75 * mm, s_line1)
-                                    c.setFont(font_name, 12) # 少しフォントを落とすか調整
+                                    c.setFont(font_name, 12)
                                     c.drawString(18 * mm, 64 * mm, s_line2)
                                 else:
                                     c.drawString(18 * mm, 75 * mm, full_name)
-                                
+                            
                             c.restoreState()
                             c.showPage()
                         
