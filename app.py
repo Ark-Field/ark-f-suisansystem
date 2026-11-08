@@ -218,7 +218,6 @@ with main_tab1:
                             skipped_count += 1
                             continue
                             
-                        # 【修正】日本語店舗名の％エンコードエラーを防ぐため、Googleでのインスタ検索リンクに変更
                         insta_link = website if (website and "instagram.com" in website) else f"https://www.google.com/search?q={urllib.parse.quote(store_name + ' インスタグラム')}"
                         approach = "インスタDM" if (website and "instagram.com" in website) else ("メール" if website else "郵送")
                         
@@ -310,7 +309,39 @@ with main_tab2:
             )
 
         st.markdown("---")
-        st.markdown("### 📝 全体編集テーブル（ステータス・アプローチ結果の入力・保存はこちら）")
+        
+        # 【追加機能】1クリックのプルダウンでサクサク変更できるクイック編集パネル
+        st.markdown("### ⚡ 【1クリックで変更】個別クイック編集パネル")
+        st.markdown("テーブルのダブルクリックが難しい場合は、こちらのプルダウンから店舗を選んで一発変更できます。")
+        with st.container():
+            q_col1, q_col2, q_col3, q_col4 = st.columns([2, 1, 1, 1])
+            store_options = target_df['店舗名'].tolist()
+            selected_store_q = q_col1.selectbox("変更したい店舗を選択", store_options, key="quick_store_sel")
+            
+            if selected_store_q:
+                q_row_idx = target_df[target_df['店舗名'] == selected_store_q].index[0]
+                cur_approach = target_df.at[q_row_idx, '優先アプローチ']
+                cur_status = target_df.at[q_row_idx, 'ステータス']
+                
+                app_options = ["インスタDM", "メール", "FAX", "郵送", "要確認"]
+                app_idx = app_options.index(cur_approach) if cur_approach in app_options else 4
+                new_app_q = q_col2.selectbox("優先アプローチ", app_options, index=app_idx, key="quick_app_sel")
+                
+                stat_options = ["未アプローチ", "active", "商談化", "見送り"]
+                stat_idx = stat_options.index(cur_status) if cur_status in stat_options else 0
+                new_stat_q = q_col3.selectbox("ステータス", stat_options, index=stat_idx, key="quick_stat_sel")
+                
+                q_col4.markdown("<br>", unsafe_allow_html=True)
+                if q_col4.button("💾 即時保存", key="btn_quick_save_single", type="primary"):
+                    target_df.at[q_row_idx, '優先アプローチ'] = new_app_q
+                    target_df.at[q_row_idx, 'ステータス'] = new_stat_q
+                    save_df_q = target_df.drop(columns=['除外'], errors='ignore')
+                    save_df_q.to_csv(MASTER_FILE, index=False, encoding='utf-8-sig')
+                    st.success(f"「{selected_store_q}」の変更を保存しました！")
+                    st.rerun()
+
+        st.markdown("---")
+        st.markdown("### 📝 全体編集テーブル（一括変更・保存はこちら）")
         
         edited_master_df = st.data_editor(
             target_df,
